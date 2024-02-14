@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 from sklearn.naive_bayes import CategoricalNB
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.cluster import KMeans
+
 
 dataFile = "data/adult.data"
 testFile = "data/adult.test"
@@ -32,10 +34,35 @@ def cleanData(fileName: str):
             X[cat_col] = 0
 
     X = X.sort_index(axis=1)
-
     return X, Y
 
 
+def clean2(fileName: str):
+    df = pd.read_csv(fileName, names=headers, na_values=['?'], skipinitialspace=True)
+    df.dropna(inplace=True)
+
+    # Remove all periods from the values
+    for column in categorical_features:
+        df[column] = df[column].str.rstrip('.')
+
+    
+    # for each continious column, map it to if it is greater than the mean of that column
+    for column in continuous_features:
+        df[column] = df[column].astype(int)
+        mean = df[column].mean()
+        df[column] = df[column].map(lambda x: 1 if x > mean else 0)
+
+
+    X = pd.get_dummies(df, drop_first=True)
+
+    # Add missing columns
+    for category in countries:
+        cat_col = "native-country_" + category
+        if cat_col not in X.columns:
+            X[cat_col] = 0
+
+    X = X.sort_index(axis=1)
+    return X
 
 trainX, trainY = cleanData(dataFile)
 testX, testY = cleanData(testFile)
@@ -78,5 +105,16 @@ getStats(model)
 
 
 
+### ============ Part 2 ============
+
+trainDf = clean2(dataFile)
+testDf = clean2(testFile)
+
+k_vals = [3,5,10]
+
+for k in k_vals:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    clusters = kmeans.fit_predict(trainDf)
+    print(f"KMeans with k={k}", clusters)
 
 
